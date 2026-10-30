@@ -3,6 +3,12 @@ dist/
 data/
 *.sqlite*
 .env
+.local-access.json
+.env.*
+!.env.example
+*.pem
+*.key
+backend/backups/
 test-results/
 playwright-report/
 .superpowers/

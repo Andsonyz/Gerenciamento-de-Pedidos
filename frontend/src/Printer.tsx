@@ -4,15 +4,12 @@ import { Receipt } from "./Receipt";
 import { usePrinter } from "./usePrinter";
 
 export function Printer() {
-  const { orders, connected, paused, hasSynced, toggleConnection } =
-    usePrinter();
+  const { orders, connected, paused, hasSynced, toggleConnection } = usePrinter();
   const [filter, setFilter] = useState<"all" | "pending" | "viewed">("all");
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const pending = orders.filter((order) => order.status === "pending").length;
-  const visible = orders.filter(
-    (order) => filter === "all" || order.status === filter,
-  );
+  const visible = orders.filter((order) => filter === "all" || order.status === filter);
   async function markViewed(id: string) {
     if (!connected || busy.has(id)) return;
     setBusy((current) => new Set(current).add(id));
@@ -20,9 +17,7 @@ export function Printer() {
     try {
       await api(`/orders/${id}/viewed`, { method: "PATCH" });
     } catch {
-      setError(
-        "Não foi possível confirmar a visualização. Reconecte e tente novamente.",
-      );
+      setError("Não foi possível confirmar a visualização. Reconecte e tente novamente.");
     } finally {
       setBusy((current) => {
         const next = new Set(current);
@@ -41,11 +36,7 @@ export function Printer() {
         </div>
         <span className={`connection-tag ${connected ? "online" : "offline"}`}>
           <i />
-          {paused
-            ? "Conexão pausada"
-            : connected
-              ? "Conectada"
-              : "Reconectando…"}
+          {paused ? "Conexão pausada" : connected ? "Conectada" : "Reconectando…"}
         </span>
       </div>
       <div className="printer-stats">
@@ -56,9 +47,7 @@ export function Printer() {
         </div>
         <div>
           <span>Visualizadas</span>
-          <strong>
-            {(orders.length - pending).toString().padStart(2, "0")}
-          </strong>
+          <strong>{(orders.length - pending).toString().padStart(2, "0")}</strong>
           <small>Guardadas no histórico</small>
         </div>
         <div>
@@ -134,8 +123,8 @@ export function Printer() {
         )}
       </div>
       <p className="printer-footnote">
-        Comanda virtual de 80 mm • Histórico persistente • Visualização
-        compartilhada entre dispositivos
+        Comanda virtual de 80 mm • Histórico persistente • Visualização compartilhada
+        entre dispositivos
       </p>
     </>
   );

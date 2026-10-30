@@ -1,3 +1,4 @@
+export * from "./premium.js";
 export interface Table {
   id: number;
   name: string;
@@ -9,6 +10,8 @@ export interface Product {
   priceCents: number;
 }
 export interface CreateOrder {
+  /** Required by the authenticated API; optional only for importing legacy MVP data. */
+  sessionId?: string;
   requestId: string;
   tableId: number;
   items: { productId: number; quantity: number }[];

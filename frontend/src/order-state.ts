@@ -5,8 +5,5 @@ export function normalizeOrders(orders: Order[]): Order[] {
   );
 }
 export function mergeOrder(orders: Order[], order: Order): Order[] {
-  return normalizeOrders([
-    ...orders.filter((value) => value.id !== order.id),
-    order,
-  ]);
+  return normalizeOrders([...orders.filter((value) => value.id !== order.id), order]);
 }

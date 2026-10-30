@@ -16,6 +16,12 @@
     "dev:frontend": "npm run build -w shared && npm run dev -w frontend",
     "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
     "start": "npm run start -w backend",
+    "setup": "npm run build -w shared && npm run build -w backend && node backend/dist/setup.js",
+    "demo:setup": "npm run build -w shared && npm run build -w backend && node backend/dist/demo-setup.js",
+    "backup": "node backend/dist/backup.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "npm run build -w shared && vitest run",
     "test:e2e": "npm run build && playwright test",
     "typecheck": "npm run build -w shared && npm run typecheck -w backend && npm run typecheck -w frontend"
@@ -23,8 +29,15 @@
   "devDependencies": {
     "@playwright/test": "^1.56.0",
     "@types/node": "^24.0.0",
+    "@types/supertest": "^7.2.1",
     "concurrently": "^9.2.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "supertest": "^7.3.1",
     "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5"
   }
 }

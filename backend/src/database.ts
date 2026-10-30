@@ -2,13 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
-import type {
-  CreateOrder,
-  Order,
-  OrderItem,
-  Product,
-  Table,
-} from "@restaurante/shared";
+import type { CreateOrder, Order, OrderItem, Product, Table } from "@restaurante/shared";
 import { HttpError } from "./errors.js";
 
 interface OrderRow {
@@ -90,12 +84,7 @@ export class OrderDatabase {
       },
     ];
     for (const product of products)
-      productInsert.run(
-        product.id,
-        product.name,
-        product.category,
-        product.priceCents,
-      );
+      productInsert.run(product.id, product.name, product.category, product.priceCents);
   }
   tables(): Table[] {
     return this.db
@@ -122,9 +111,7 @@ export class OrderDatabase {
     return fromRow(row);
   }
   create(input: CreateOrder): { order: Order; created: boolean } {
-    const sortedItems = [...input.items].sort(
-      (a, b) => a.productId - b.productId,
-    );
+    const sortedItems = [...input.items].sort((a, b) => a.productId - b.productId);
     const fingerprint = JSON.stringify({
       tableId: input.tableId,
       items: sortedItems,
@@ -137,10 +124,7 @@ export class OrderDatabase {
         .get(input.requestId) as unknown as OrderRow | undefined;
       if (existing) {
         if (existing.fingerprint !== fingerprint)
-          throw new HttpError(
-            409,
-            "Esta chave de envio já pertence a outro pedido.",
-          );
+          throw new HttpError(409, "Esta chave de envio já pertence a outro pedido.");
         this.db.exec("COMMIT");
         return { order: fromRow(existing), created: false };
       }
