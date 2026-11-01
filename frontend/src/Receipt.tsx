@@ -48,8 +48,7 @@ export function Receipt({
       )}
       <div className="receipt-divider" />
       <p className="receipt-footer">
-        {order.items.reduce((sum, item) => sum + item.quantity, 0)} itens • Fim
-        da comanda
+        {order.items.reduce((sum, item) => sum + item.quantity, 0)} itens • Fim da comanda
       </p>
       {order.status === "pending" ? (
         <button

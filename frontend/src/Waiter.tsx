@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CreateOrder, Order, Product, Table } from "@restaurante/shared";
 import { api, ApiError, money, tableName } from "./api";
-import {
-  clearPending,
-  createRequestId,
-  readPending,
-  savePending,
-} from "./submission";
+import { clearPending, createRequestId, readPending, savePending } from "./submission";
 
 interface InitialState {
   pending: CreateOrder | null;
@@ -28,13 +23,10 @@ export function Waiter() {
   const [initial] = useState(initialState);
   const [tables, setTables] = useState<Table[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [tableId, setTableId] = useState<number | null>(
-    initial.pending?.tableId ?? null,
-  );
+  const [tableId, setTableId] = useState<number | null>(initial.pending?.tableId ?? null);
   const [quantities, setQuantities] = useState<Record<number, number>>(() =>
     Object.fromEntries(
-      initial.pending?.items.map((item) => [item.productId, item.quantity]) ??
-        [],
+      initial.pending?.items.map((item) => [item.productId, item.quantity]) ?? [],
     ),
   );
   const [notes, setNotes] = useState(initial.pending?.notes ?? "");
@@ -73,13 +65,8 @@ export function Waiter() {
   }, [reload]);
 
   const locked = sending || !!pending || !!initial.error;
-  const selected = products.filter(
-    (product) => (quantities[product.id] ?? 0) > 0,
-  );
-  const count = Object.values(quantities).reduce(
-    (sum, quantity) => sum + quantity,
-    0,
-  );
+  const selected = products.filter((product) => (quantities[product.id] ?? 0) > 0);
+  const count = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
   const total = selected.reduce(
     (sum, product) => sum + product.priceCents * (quantities[product.id] ?? 0),
     0,
@@ -162,10 +149,7 @@ export function Waiter() {
       {catalogError && (
         <div className="notice error" role="alert">
           {catalogError}
-          <button
-            className="text-button"
-            onClick={() => setReload((value) => value + 1)}
-          >
+          <button className="text-button" onClick={() => setReload((value) => value + 1)}>
             Tentar carregar novamente
           </button>
         </div>
@@ -182,8 +166,8 @@ export function Waiter() {
       )}
       {pending && !sending && (
         <div className="notice warning">
-          Há um envio aguardando confirmação. Confira os itens abaixo e tente
-          enviá-lo novamente.
+          Há um envio aguardando confirmação. Confira os itens abaixo e tente enviá-lo
+          novamente.
         </div>
       )}
       <section className="panel tables-panel" aria-labelledby="tables-heading">
@@ -193,9 +177,7 @@ export function Waiter() {
             <h2 id="tables-heading">Escolha a mesa</h2>
           </div>
           <span className="muted text-sm">
-            {tableId
-              ? `${tableName(tableId)} selecionada`
-              : "Nenhuma selecionada"}
+            {tableId ? `${tableName(tableId)} selecionada` : "Nenhuma selecionada"}
           </span>
         </div>
         {loading ? (
@@ -233,19 +215,18 @@ export function Waiter() {
             <span className="muted text-sm">{products.length} produtos</span>
           </div>
           <div className="category-list" aria-label="Categorias do cardápio">
-            {[
-              "Todos",
-              ...new Set(products.map((product) => product.category)),
-            ].map((value) => (
-              <button
-                key={value}
-                className={`chip ${value === category ? "active" : ""}`}
-                aria-pressed={category === value}
-                onClick={() => setCategory(value)}
-              >
-                {value}
-              </button>
-            ))}
+            {["Todos", ...new Set(products.map((product) => product.category))].map(
+              (value) => (
+                <button
+                  key={value}
+                  className={`chip ${value === category ? "active" : ""}`}
+                  aria-pressed={category === value}
+                  onClick={() => setCategory(value)}
+                >
+                  {value}
+                </button>
+              ),
+            )}
           </div>
           {loading ? (
             <p className="muted py-8">Carregando cardápio…</p>
@@ -253,8 +234,7 @@ export function Waiter() {
             <div className="product-list">
               {products
                 .filter(
-                  (product) =>
-                    category === "Todos" || product.category === category,
+                  (product) => category === "Todos" || product.category === category,
                 )
                 .map((product) => (
                   <div className="product" key={product.id}>
@@ -373,9 +353,7 @@ export function Waiter() {
               setSuccess("");
             }}
           />
-          <div className="text-right text-xs muted mt-1">
-            {notes.length}/500
-          </div>
+          <div className="text-right text-xs muted mt-1">{notes.length}/500</div>
           <div className="order-total">
             <span>Total do pedido</span>
             <strong>{money(total)}</strong>
