@@ -1,5 +1,7 @@
-const CACHE = "mesa-static-v2";
-const SHELL = ["/", "/icon.svg", "/manifest.webmanifest"];
+const TRAINING = self.location.pathname.startsWith("/simulacao/");
+const ROOT = TRAINING ? "/simulacao/" : "/";
+const CACHE = TRAINING ? "mesa-training-static-v3" : "mesa-static-v3";
+const SHELL = [ROOT, "/icon.svg", "/manifest.webmanifest"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
   self.skipWaiting();
@@ -9,7 +11,17 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))),
+        Promise.all(
+          keys
+            .filter(
+              (key) =>
+                key !== CACHE &&
+                (TRAINING
+                  ? key.startsWith("mesa-training-")
+                  : key.startsWith("mesa-static-")),
+            )
+            .map((key) => caches.delete(key)),
+        ),
       )
       .then(() => self.clients.claim()),
   );
@@ -19,6 +31,8 @@ self.addEventListener("fetch", (event) => {
   if (
     event.request.method !== "GET" ||
     url.origin !== self.location.origin ||
+    (!TRAINING && url.pathname.startsWith("/simulacao")) ||
+    url.pathname.startsWith("/simulacao/api") ||
     url.pathname.startsWith("/api") ||
     url.pathname.startsWith("/socket.io")
   )
@@ -29,11 +43,11 @@ self.addEventListener("fetch", (event) => {
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-            void caches.open(CACHE).then((cache) => cache.put("/", copy));
+            void caches.open(CACHE).then((cache) => cache.put(ROOT, copy));
           }
           return response;
         })
-        .catch(() => caches.match("/")),
+        .catch(() => caches.match(ROOT)),
     );
     return;
   }

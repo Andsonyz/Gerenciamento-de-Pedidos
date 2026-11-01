@@ -4,6 +4,7 @@ data/
 *.sqlite*
 .env
 .local-access.json
+.local-access.json.tmp
 .env.*
 !.env.example
 *.pem

@@ -22,13 +22,13 @@ function passwordMatches(password: string, stored: string) {
   const expected = Buffer.from(digest, "hex");
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
-export function cookieToken(cookie: string | undefined) {
+export function cookieToken(cookie: string | undefined, name = "restaurant_session") {
   return (
     cookie
       ?.split(";")
       .map((v) => v.trim())
-      .find((v) => v.startsWith("restaurant_session="))
-      ?.slice("restaurant_session=".length) ?? ""
+      .find((v) => v.startsWith(`${name}=`))
+      ?.slice(name.length + 1) ?? ""
   );
 }
 interface UserRow {
@@ -48,7 +48,11 @@ const publicUser = (row: UserRow): User => ({
 });
 export class AuthService {
   private attempts = new Map<string, { count: number; until: number }>();
-  constructor(private db: Store) {}
+  constructor(
+    private db: Store,
+    readonly cookieName = "restaurant_session",
+    readonly cookiePath = "/",
+  ) {}
   users(): User[] {
     return this.db.all<UserRow>("SELECT * FROM users ORDER BY name").map(publicUser);
   }
@@ -59,6 +63,8 @@ export class AuthService {
     this.saveUser(null, { ...input, role: "admin", active: true });
   }
   saveUser(actor: string | null, input: UserInput, id?: string): User {
+    if (input.password && (input.password.length < 12 || input.password.length > 200))
+      throw new HttpError(400, "A senha deve ter de 12 a 200 caracteres.");
     return this.db.tx(() => {
       const existing = id
         ? this.db.get<UserRow>("SELECT * FROM users WHERE id=?", id)
@@ -163,7 +169,7 @@ export class AuthService {
   }
   middleware = (req: Request, res: Response, next: NextFunction) => {
     try {
-      const session = this.session(cookieToken(req.headers.cookie));
+      const session = this.session(cookieToken(req.headers.cookie, this.cookieName));
       res.locals.auth = session;
       if (
         !["GET", "HEAD", "OPTIONS"].includes(req.method) &&

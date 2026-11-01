@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Armchair, ArrowUpRight, Plus, Printer, ReceiptText, Wallet } from "lucide-react";
 import type { Bill, DiningTable, Payment } from "@restaurante/shared";
 import { useStore } from "./state";
 import { Badge, Empty, Field, Form, Heading, Modal, str } from "./components";
 import { dateTime, money, parseCents } from "./api";
 import { Composer } from "./Orders";
+import { TableAttentionBadge } from "./Notifications";
 const amountInput = (cents: number) =>
   `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")}`;
 export const paymentLabel: Record<string, string> = {
@@ -21,6 +23,18 @@ export function TablesPage() {
   const [billId, setBillId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [open, setOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const tableId = Number(params.get("table"));
+    if (!tableId) return;
+    const selected = data.tables.find((t) => t.id === tableId);
+    if (selected) {
+      setTable(selected);
+      const next = new URLSearchParams(params);
+      next.delete("table");
+      setParams(next, { replace: true });
+    }
+  }, [data.tables, params, setParams]);
   const waiter = auth!.user.role === "waiter";
   return (
     <>
@@ -80,6 +94,7 @@ export function TablesPage() {
               </div>
               <strong>{item.name}</strong>
               <Badge status={item.status} />
+              <TableAttentionBadge tableId={item.id} />
               <span className="table-card-caption">
                 {item.sessionId ? "Ver atendimento" : "Gerenciar mesa"}
               </span>
@@ -90,6 +105,7 @@ export function TablesPage() {
       {table && (
         <Modal title={table.name} onClose={() => setTable(null)}>
           <Badge status={table.status} />
+          <TableAttentionBadge tableId={table.id} />
           {!table.sessionId ? (
             <div className="section-gap">
               {open ? (
@@ -120,6 +136,46 @@ export function TablesPage() {
             </div>
           ) : (
             <div className="action-stack section-gap">
+              {data.notifications.items.some(
+                (n) => n.tableId === table.id && n.type === "waiter",
+              ) && (
+                <Form
+                  label="Atender chamado"
+                  onSubmit={async () => {
+                    await mutate(
+                      `/tables/${table.id}/acknowledge-call`,
+                      {},
+                      "POST",
+                      `attend:${table.sessionId}`,
+                    );
+                    notify("Garçom iniciou o atendimento.");
+                    setTable(null);
+                  }}
+                >
+                  <p className="small muted">
+                    Confirme que o garçom está atendendo esta mesa.
+                  </p>
+                </Form>
+              )}
+              {table.status === "occupied" && (
+                <Form
+                  label="Chamar garçom"
+                  onSubmit={async () => {
+                    await mutate(
+                      `/tables/${table.id}/call-waiter`,
+                      {},
+                      "POST",
+                      `call:${table.sessionId}`,
+                    );
+                    notify("Garçom chamado.");
+                    setTable(null);
+                  }}
+                >
+                  <p className="small muted">
+                    O aviso aparece no salão e na lateral dos dispositivos conectados.
+                  </p>
+                </Form>
+              )}
               <button
                 className="button primary"
                 onClick={() => {

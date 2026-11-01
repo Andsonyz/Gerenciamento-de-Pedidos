@@ -1,0 +1,408 @@
+.ops-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.ops-tabs,
+.ops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0;
+}
+.ops-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.ops-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.ops-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.ops-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  text-align: left;
+}
+.ops-table th {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ops-table td {
+  padding: 16px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.ops-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ops-table td small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+  max-width: 340px;
+}
+.ops-table td .button {
+  margin: 0 5px 5px 0;
+  white-space: nowrap;
+}
+.ops-warning {
+  color: var(--red);
+}
+.ops-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ops-history {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 15px;
+}
+.ops-history summary {
+  cursor: pointer;
+  color: var(--gold-light);
+}
+.ops-history ul,
+.ops-history p {
+  margin-top: 12px;
+}
+.ops-recipe-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.65fr auto;
+  gap: 10px;
+  align-items: end;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+.ops-purchase-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr 0.6fr 1fr;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.ops-purchase-row > .button {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+.ops-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+}
+.ops-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  background: var(--surface);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ops-card strong {
+  font-size: 20px;
+}
+.ops-card > .button {
+  align-self: flex-start;
+}
+.ops-check-list {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.ops-check-list legend {
+  padding: 0 6px;
+  color: var(--muted);
+}
+.ops-ranking {
+  display: grid;
+  gap: 14px;
+  padding: 10px 0;
+}
+.ops-ranking > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 2fr 40px;
+  gap: 14px;
+  align-items: center;
+}
+.ops-ranking > div > div {
+  height: 9px;
+  background: var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ops-ranking > div > div > span {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: inherit;
+}
+.ops-ranking strong {
+  text-align: right;
+}
+.ops-formula {
+  padding: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.ops-simulation-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 40px;
+  max-width: 1050px;
+}
+.ops-simulation-intro > p {
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 16px;
+}
+.ops-simulation-intro > .button {
+  align-self: flex-start;
+}
+.ops-intro-icon {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gold);
+  color: var(--gold-light);
+  border-radius: 22px;
+}
+.ops-training-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  color: var(--gold-light);
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+.ops-training-banner strong {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+.ops-training-banner span {
+  font-size: 12px;
+}
+.ops-simulation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+.ops-simulation-controls .field {
+  min-width: 200px;
+}
+.ops-simulation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+.ops-floor {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px 18px;
+  padding: 10px 0;
+}
+.ops-floor-table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  min-width: 0;
+  padding: 16px 8px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+.ops-chair-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.ops-person {
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+}
+.ops-person.occupied {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.ops-table-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 105px;
+  width: 100%;
+  max-width: 160px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.ops-floor-table[class*="group-"] .ops-table-top {
+  border-color: var(--gold);
+  color: var(--gold-light);
+}
+.ops-floor-table.group-requesting {
+  border-color: var(--gold);
+  background: var(--surface);
+}
+.ops-floor-table.group-dining .ops-table-top {
+  border-color: var(--green);
+  color: var(--green);
+}
+.ops-floor-table.group-payment .ops-table-top {
+  border-color: var(--red);
+  color: var(--red);
+}
+.ops-floor-status {
+  font-size: 11px;
+  color: var(--muted);
+}
+.ops-floor-table > .button {
+  width: 100%;
+  max-width: 160px;
+  justify-content: center;
+  padding: 9px 5px;
+  font-size: 12px;
+}
+.ops-floor-table .ops-warning {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.ops-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 650px;
+  overflow-y: auto;
+}
+.ops-timeline li {
+  position: relative;
+  margin-left: 5px;
+  border-left: 1px solid var(--border);
+  padding: 0 0 20px 18px;
+}
+.ops-timeline li::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  position: absolute;
+  top: 5px;
+  left: -4px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+.ops-timeline time {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ops-timeline p {
+  font-size: 12px;
+  margin-top: 4px;
+}
+@media (max-width: 1200px) {
+  .ops-simulation-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ops-timeline {
+    max-height: 280px;
+  }
+}
+@media (max-width: 760px) {
+  .ops-form-grid,
+  .ops-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ops-recipe-row,
+  .ops-purchase-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ops-recipe-row > .field:first-child,
+  .ops-purchase-row > .field:first-child {
+    grid-column: 1 / -1;
+  }
+  .ops-floor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 8px;
+  }
+  .ops-simulation-intro {
+    padding: 24px;
+  }
+  .ops-ranking > div {
+    grid-template-columns: minmax(80px, 1fr) 1fr 30px;
+    font-size: 12px;
+  }
+  .ops-tabs .button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .ops-pagination {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ops-floor *,
+  .ops-ranking * {
+    transition: none;
+    animation: none;
+  }
+}
+.training-login-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 20px;
+  background: #c8a96b;
+  color: #101113;
+  z-index: 5;
+  font-size: 13px;
+  text-align: center;
+}
+.training-login-banner a {
+  color: inherit;
+  text-decoration: underline;
+}

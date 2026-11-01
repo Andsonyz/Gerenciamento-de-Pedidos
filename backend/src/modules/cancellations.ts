@@ -5,9 +5,9 @@ import type {
   PremiumOrder,
   User,
 } from "@restaurante/shared";
-import { now } from "../database/store.js";
 import { HttpError } from "../errors.js";
 import { Restaurant } from "./restaurant.js";
+import { Inventory } from "./inventory.js";
 
 export class Cancellations {
   constructor(private r: Restaurant) {}
@@ -82,7 +82,7 @@ export class Cancellations {
           user.id,
           input.reason,
           JSON.stringify(items),
-          now(),
+          this.r.db.timestamp(),
         );
         this.r.db.audit(user.id, "cancellation.requested", id, {
           requestId,
@@ -104,6 +104,7 @@ export class Cancellations {
     );
     if (before.discountCents > before.subtotalCents - cancelledValue)
       throw new HttpError(409, "Ajuste o desconto da conta antes deste cancelamento.");
+    new Inventory(this.r.db).cancel(user, order, items, input.reason);
     for (const item of items)
       this.r.db.run(
         "UPDATE order_items SET cancelled_quantity=cancelled_quantity+? WHERE id=?",
@@ -124,7 +125,7 @@ export class Cancellations {
         item.quantity,
         input.reason,
         user.id,
-        now(),
+        this.r.db.timestamp(),
         order.status,
         newState,
       );
@@ -191,7 +192,7 @@ export class Cancellations {
         input.approve ? "approved" : "rejected",
         input.reason,
         user.id,
-        now(),
+        this.r.db.timestamp(),
         id,
       );
       this.r.db.audit(user.id, "cancellation.resolved", id, input);

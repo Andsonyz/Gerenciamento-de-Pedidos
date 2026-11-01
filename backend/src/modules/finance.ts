@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import type { PaymentMethod, User } from "@restaurante/shared";
-import { now } from "../database/store.js";
 import { HttpError } from "../errors.js";
 import { Restaurant } from "./restaurant.js";
 
@@ -84,7 +83,7 @@ export class Finance {
           input.method,
           input.amountCents,
           tendered,
-          now(),
+          this.r.db.timestamp(),
         );
         this.r.db.run(
           "UPDATE table_sessions SET status='awaiting_payment' WHERE id=?",
@@ -135,7 +134,7 @@ export class Finance {
           user.id,
           input.amountCents,
           input.reason,
-          now(),
+          this.r.db.timestamp(),
         );
         this.r.db.audit(user.id, "payment.refunded", id, {
           amountCents: input.amountCents,
@@ -181,7 +180,7 @@ export class Finance {
         }
         this.r.db.run(
           "UPDATE table_sessions SET status='closed',closed_at=? WHERE id=?",
-          now(),
+          this.r.db.timestamp(),
           id,
         );
         this.r.db.run(

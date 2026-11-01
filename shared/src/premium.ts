@@ -37,6 +37,8 @@ export interface CatalogProduct {
   priceCents: number;
   active: boolean;
   available: boolean;
+  stockTracked?: boolean;
+  stockAvailable?: boolean;
 }
 export type OrderStatus = "received" | "preparing" | "ready" | "delivered" | "cancelled";
 export interface PremiumOrderItem {
@@ -145,6 +147,7 @@ export interface Dashboard {
 export interface RestaurantSettings {
   name: string;
   otherPaymentEnabled: boolean;
+  timeZone?: string;
 }
 export interface StateChange {
   id: string;

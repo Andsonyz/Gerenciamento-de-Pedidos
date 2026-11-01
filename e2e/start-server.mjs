@@ -5,6 +5,7 @@ import { createApplication } from "../backend/dist/app.js";
 const directory = await mkdtemp(join(tmpdir(), "restaurante-e2e-"));
 const application = createApplication({
   dbPath: join(directory, "test.sqlite"),
+  simulationDbPath: join(directory, "simulation.sqlite"),
   staticDir: resolve("frontend/dist"),
   bootstrapAdmin: {
     username: "admin",

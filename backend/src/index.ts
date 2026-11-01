@@ -1,13 +1,14 @@
 import { fileURLToPath } from "node:url";
 import { networkInterfaces } from "node:os";
 import { createApplication } from "./app.js";
-import { dbPath, tlsOptions } from "./config.js";
+import { dbPath, simulationDbPath, tlsOptions } from "./config.js";
 
 const port = Number(process.env.PORT ?? 3001);
 if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error("PORT deve ser uma porta entre 1 e 65535.");
 const server = createApplication({
   dbPath,
+  simulationDbPath,
   tls: tlsOptions(),
   allowedSubnets: process.env.ALLOWED_SUBNETS?.split(",")
     .map((s) => s.trim())

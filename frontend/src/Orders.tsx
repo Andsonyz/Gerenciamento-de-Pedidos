@@ -5,6 +5,7 @@ import { useStore } from "./state";
 import { Badge, Empty, Field, Form, Heading, Modal, str } from "./components";
 import { dateTime, money } from "./api";
 import { tabScope } from "./operations";
+import { SIMULATION } from "./environment";
 
 interface Draft {
   quantities: Record<number, number>;
@@ -19,7 +20,7 @@ export function Composer({
 }) {
   const { auth, data, mutate, notify, pending } = useStore();
   const scope = tabScope();
-  const key = `mesa.draft.v3.${auth!.user.id}.${table.id}.${table.sessionId}.${scope}`;
+  const key = `mesa.draft.v3.${SIMULATION ? "simulation." : ""}${auth!.user.id}.${table.id}.${table.sessionId}.${scope}`;
   const [draft, setDraft] = useState<Draft>(() => {
     try {
       const value: unknown = JSON.parse(
@@ -51,6 +52,7 @@ export function Composer({
   const [category, setCategory] = useState("Todos");
   const [search, setSearch] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify(draft));
   }, [key, draft]);
@@ -113,6 +115,13 @@ export function Composer({
                   <div className="menu-item-info">
                     <strong>{product.name}</strong>
                     <small>{product.category}</small>
+                    <small>
+                      {product.stockTracked
+                        ? product.stockAvailable
+                          ? "Ingredientes disponíveis"
+                          : "Ingredientes insuficientes"
+                        : "Sem controle de estoque"}
+                    </small>
                     <span className="gold">{money(product.priceCents)}</span>
                     {!product.available && (
                       <small className="error-text">Indisponível</small>
@@ -133,6 +142,8 @@ export function Composer({
                       disabled={
                         uncertain ||
                         !product.available ||
+                        (product.stockAvailable === false &&
+                          auth!.user.role !== "admin") ||
                         (draft.quantities[product.id] || 0) >= 99
                       }
                       className="icon-button"
@@ -182,6 +193,16 @@ export function Composer({
           <p className="muted small">
             Rascunho salvo neste dispositivo. O pedido só é confirmado após o envio.
           </p>
+          {auth!.user.role === "admin" && (
+            <Field label="Justificativa para autorizar falta de estoque (opcional)">
+              <input
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                maxLength={500}
+                disabled={uncertain}
+              />
+            </Field>
+          )}
           {uncertain && (
             <div className="alert">
               Há um envio aguardando confirmação. A nova tentativa usa os mesmos itens e
@@ -204,6 +225,9 @@ export function Composer({
                         quantity: draft.quantities[product.id],
                       })),
                       notes: draft.notes,
+                      ...(overrideReason.trim()
+                        ? { overrideReason: overrideReason.trim() }
+                        : {}),
                     },
                     "POST",
                     `order:${table.sessionId}`,

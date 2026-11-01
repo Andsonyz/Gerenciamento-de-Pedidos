@@ -30,6 +30,8 @@ const auditLabels: Record<string, string> = {
   "user.saved": "Acesso de funcionário atualizado",
   "migration.premium": "Dados anteriores importados",
   "settings.updated": "Configurações atualizadas",
+  "table.waiter-called": "Garçom chamado",
+  "table.waiter-attended": "Atendimento do garçom iniciado",
   "category.saved": "Categoria cadastrada",
   "product.saved": "Produto atualizado",
   "table.opened": "Atendimento aberto",
@@ -573,6 +575,7 @@ export function SettingsPage() {
               {
                 name: str(form, "name"),
                 otherPaymentEnabled: form.get("other") === "on",
+                timeZone: str(form, "timeZone"),
               },
               "PATCH",
             );
@@ -585,6 +588,14 @@ export function SettingsPage() {
               defaultValue={data.settings.name}
               required
               maxLength={100}
+            />
+          </Field>
+          <Field label="Fuso horário do restaurante">
+            <input
+              name="timeZone"
+              defaultValue={data.settings.timeZone || "America/Fortaleza"}
+              required
+              maxLength={80}
             />
           </Field>
           <label className="check">

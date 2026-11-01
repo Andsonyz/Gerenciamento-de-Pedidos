@@ -1,8 +1,53 @@
 # mesa. — Gestão de Restaurante
 
-Sistema local com três ambientes integrados: **administração e caixa**, **garçom** e **Central de Impressão — Cozinha**. Os dados ficam em um único SQLite no computador servidor. A interface possui temas escuro e claro, layout para desktop e navegação para celulares.
+Sistema local com **administração e caixa**, **garçom**, **Central de Impressão — Cozinha**, **estoque e compras** e **simulação de atendimento**. O restaurante usa um SQLite central no computador servidor; o treinamento usa outro arquivo independente. A interface possui temas escuro e claro, layout para desktop e navegação para celulares.
 
 Pedidos, cancelamentos, pagamentos manuais e comandas são funcionais e persistidos. O sistema gera conferências de consumo não fiscais. A cozinha usa um simulador visual de comandas de 80 mm, sem preços e sem integração com equipamentos físicos.
+
+## Novidades: estoque, compras e treinamento
+
+### Notificações do salão
+
+As mesas e o mapa da simulação mostram **!** com texto e cor: **amarelo** para aguardar garçom, **azul** para aguardar registro/preparo/entrega do pedido e **vermelho** para fechamento de conta. A lateral informa a quantidade de mesas por tipo; o sino no cabeçalho abre a central **Notificações**, com filtros e acesso à mesa.
+
+Ocupar uma mesa inicia o aviso de garçom. Use **Atender chamado** para confirmar o atendimento ou **Chamar garçom** para solicitar novo atendimento em uma mesa ocupada. Enviar um pedido confirma o atendimento; entregar todos os pedidos remove a pendência de pedido. Solicitar fechamento sinaliza o caixa até encerrar a mesa. Cada mesa conta uma vez, com prioridade para fechamento, depois garçom e pedido.
+
+Os chamados são persistidos, e os estados são recuperados após recarga/reconexão. Restaurante e treinamento permanecem separados. [Verificação das notificações](docs/notifications-verification.md).
+
+- **Ingredientes e estoque**: cadastros, entradas, perdas, ajustes justificados, reservas, consumo e histórico paginado.
+- **Fichas técnicas**: versões por produto, preservadas no pedido. Produtos antigos continuam como **Sem controle de estoque** até a configuração explícita.
+- **Compras e fornecedores**: rascunhos, confirmação, recebimentos parciais e cancelamento do saldo. Confirmar compra não aumenta estoque; receber aumenta. Não há pagamento automático a fornecedor.
+- **Indicadores e reposição**: produtos mais pedidos, cancelamentos, valores históricos, recebimentos de clientes, consumo, desperdícios, compras e lista sugerida.
+- **Simulação**: salão com 12 mesas, chegada de grupos, atendimento interativo ou automático, cozinha e caixa opcionais, pausa, velocidades 1x/2x/5x e cenários de falha.
+
+O administrador gerencia os novos cadastros e operações. O caixa consulta indicadores e saldos; garçons recebem a disponibilidade dos produtos e a cozinha mantém somente dados operacionais.
+
+### Como usar estoque e compras
+
+1. Cadastre ingredientes e fornecedores. Escolha unidade base **g**, **ml** ou **un** e estoque mínimo.
+2. Registre o saldo inicial como movimentação. A interface aceita kg/litros convertidos exatamente; frações menores que 1 g, 1 ml ou 1 unidade são recusadas.
+3. Em **Fichas técnicas**, selecione um produto e registre as quantidades por unidade vendida. Cada alteração cria versão nova.
+4. Ao confirmar pedido, os ingredientes são reservados. Ao iniciar preparo, as reservas tornam-se consumo. Cancelar antes libera reserva; depois do preparo registra desperdício, sem devolver saldo ou baixá-lo novamente.
+5. Falta de ingrediente bloqueia envio. Somente administrador pode autorizar com justificativa. Déficits autorizados permanecem visíveis. Ajustes físicos também exigem justificativa.
+6. Crie compra, confira e confirme. Registre somente o que realmente chegou em cada recebimento. Correções posteriores usam ajuste compensatório auditado; não apague o recebimento original.
+
+### Como usar a simulação
+
+Entre como administrador e clique em **Abrir simulação**, ou acesse **http://localhost:3001/simulacao/**. Faça login próprio nessa área e abra **Simulação**. O aviso **AMBIENTE SIMULADO — DADOS DE TREINAMENTO** identifica o contexto.
+
+Configure modo, semente, quantidade de grupos, intervalo, tempos de preparo/consumo e automações. No modo interativo, entre como `garcom` em outra aba de treinamento, assuma uma chamada, revise os produtos e confirme. Com cozinha/caixa automáticos desligados, participantes desses perfis utilizam as telas normais do treinamento. No automático, o sistema executa o ciclo até o pagamento simulado e liberação da mesa.
+
+O motor continua enquanto a página estiver fechada. Reiniciar o servidor recupera o cenário **pausado**; use **Continuar**. **Reiniciar cenário** apaga os dados operacionais do treinamento e restaura o estoque demonstrativo, preservando seus usuários, sessões e auditoria. Essa ação não altera o restaurante real.
+
+Pedidos, pagamentos, estoque, cookies, CSRF, conexões, rascunhos e operações pendentes são separados. O banco padrão é `backend/data/simulation.sqlite`. Não configure os dois ambientes com o mesmo arquivo, mesmo por outro nome ou link.
+
+### Como interpretar a reposição
+
+A sugestão usa consumo médio diário em até 28 dias observados, incluindo dias sem consumo e respeitando o início do controle. Horizonte inicial: 7 dias, editável de 1 a 90. Com menos de 7 dias observados, considera somente necessidade do mínimo e informa histórico insuficiente.
+
+`sugestão = máximo(0, consumo médio × cobertura + mínimo − disponível − compras confirmadas a receber)`
+
+O resultado é arredondado para cima na unidade base com cálculo inteiro. Compras pendentes de todos os fornecedores entram na cobertura mesmo ao filtrar um fornecedor. A sugestão pode virar rascunho revisável; não é enviada automaticamente. Os indicadores distinguem data do pedido, consumo, recebimento de compra e pagamento. O fuso é configurável em **Configurações**, inicialmente `America/Fortaleza`. Valor dos itens vendidos não é dinheiro recebido nem lucro.
 
 ## Instalação no Windows e VS Code
 
@@ -39,6 +84,21 @@ npm run demo:setup
 Esse comando cria, explicitamente, os usuários `admin`, `caixa`, `garcom` e `cozinha`, com **senhas aleatórias diferentes**, e informa as senhas no terminal. Os acessos desta instalação ficam em **`.local-access.json`**, na raiz, ignorado pelo Git e fora da pasta pública. Contas já existentes são preservadas. O comando se recusa a sobrescrever um arquivo de acessos existente.
 
 Consulte o arquivo local pelo VS Code. Altere as senhas e desative os acessos de teste em **Equipe** antes de operar com dados reais. Os usuários de testes automatizados pertencem a bancos temporários e não são os acessos desta instalação.
+
+Para redefinir explicitamente os quatro acessos locais e os equivalentes do treinamento para **123**:
+
+```powershell
+npm run access:reset-demo
+```
+
+| Usuário | Senha de teste | Perfil        |
+| ------- | -------------- | ------------- |
+| admin   | 123            | Administrador |
+| caixa   | 123            | Caixa         |
+| garcom  | 123            | Garçom        |
+| cozinha | 123            | Cozinha       |
+
+O comando valida papéis, preserva IDs e históricos, revoga sessões anteriores e atualiza `.local-access.json`. Não redefine automaticamente na inicialização. A senha curta é exceção desses acessos de teste; o cadastro normal continua exigindo 12 caracteres. Troque essas credenciais antes do uso com dados reais.
 
 | Perfil        | Acesso                                                                               |
 | ------------- | ------------------------------------------------------------------------------------ |
@@ -206,6 +266,8 @@ A estrutura original dos três workspaces foi mantida para evitar movimentaçõe
 
 Os serviços de pedidos dependem do contrato da fila de impressão. Um futuro `EscPosPrinterAdapter` deverá implementar entrega/retentativa e confirmação física sem alterar o registro do pedido. Exigirá spool persistente, política para resultado de impressão incerto e testes com equipamento; não basta tratar Socket.IO como confirmação física.
 
+O backup do treinamento é separado: execute `npm run backup:simulation` após o build. Para restaurar, encerre o servidor, preserve os arquivos atuais e restaure o snapshot correspondente ao ambiente escolhido; não copie o banco de treinamento sobre o operacional. `SIMULATION_DATABASE_PATH` permite definir seu caminho no servidor, com validação de separação física.
+
 ## Segurança
 
 Senhas usam scrypt com salt; o banco guarda hashes. Sessões têm token aleatório em cookie HttpOnly/SameSite Strict e expiram em 12 horas; o banco guarda hash do token. Mutações exigem CSRF. Alterar/desativar usuário revoga suas sessões. O backend valida dados com Zod, usa parâmetros SQL, limita tamanho de corpo e tentativas de login, aplica papéis e protege conexões Socket.IO. React renderiza textos sem inserir HTML fornecido pelo usuário. Arquivos SQLite, chaves e credenciais não são servidos pelo frontend.
@@ -228,6 +290,8 @@ npm audit
 
 Os testes usam bancos temporários e não alteram os pedidos desta instalação. O E2E exige a porta **3101** livre. Capturas e traces ficam em `test-results/` e não são versionados. O relatório [verificação premium](docs/premium-verification.md) distingue o que foi executado das limitações conhecidas. [Verificação do MVP anterior](docs/verification.md) permanece como registro histórico.
 
+Resultados desta evolução e contratos adicionais: [verificação de estoque, compras e simulação](docs/evolution-verification.md). Os relatórios anteriores são históricos.
+
 ## Solução de problemas
 
 | Problema               | Verificação                                                                                                       |
@@ -247,3 +311,5 @@ Os testes usam bancos temporários e não alteram os pedidos desta instalação.
 ## Limites desta entrega
 
 Pagamentos e estornos são registros manuais; não há integração bancária, emissão fiscal ou hardware ESC/POS. Estornos de contas já encerradas exigem evolução futura específica; o fluxo atual bloqueia essa alteração. Não há transferência/divisão de mesas ou reservas por horário. A validação automatizada em viewport de celular não substitui teste do Wi-Fi, firewall, confiança HTTPS e instalação em aparelhos físicos do restaurante. WCAG recebeu cuidados de foco, diálogo, rótulos e teclado, mas não há certificação formal de acessibilidade.
+
+Compras não incluem contas a pagar, múltiplos depósitos, validade ou lotes. Quantidades usam precisão inteira na unidade base. Reposição é estimativa operacional, sem previsão por IA. Consultas analíticas agregam o histórico local e não foram submetidas a ensaio de grande volume. A simulação é 2D com estados e movimentação operacional, sem animação física detalhada. Produtos reais não recebem fichas técnicas fictícias e pedidos anteriores não geram consumo retroativo.

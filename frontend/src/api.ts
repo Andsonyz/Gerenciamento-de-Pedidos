@@ -1,3 +1,4 @@
+import { BASE_PATH } from "./environment";
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -15,7 +16,7 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(`/api${path}`, {
+    const response = await fetch(`${BASE_PATH}/api${path}`, {
       ...options,
       credentials: "include",
       signal: controller.signal,

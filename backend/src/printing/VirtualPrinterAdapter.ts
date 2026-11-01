@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { PremiumOrder, PrintJob, User } from "@restaurante/shared";
 import type { PrintQueueAdapter } from "./PrinterAdapter.js";
-import { Store, now } from "../database/store.js";
+import { Store } from "../database/store.js";
 import { HttpError } from "../errors.js";
 
 export class VirtualPrinterAdapter implements PrintQueueAdapter {
@@ -43,7 +43,7 @@ export class VirtualPrinterAdapter implements PrintQueueAdapter {
       id,
       order.id,
       type,
-      now(),
+      this.db.timestamp(),
       JSON.stringify({ items, notes: order.notes, reason }),
     );
     return this.get(id);
@@ -79,7 +79,7 @@ export class VirtualPrinterAdapter implements PrintQueueAdapter {
       this.db.run(
         "UPDATE print_jobs SET status=?,displayed_at=? WHERE id=?",
         status,
-        status === "displayed" ? now() : null,
+        status === "displayed" ? this.db.timestamp() : null,
         id,
       );
       this.db.audit(user.id, "print.updated", id, { before: job.status, after: status });
@@ -106,7 +106,7 @@ export class VirtualPrinterAdapter implements PrintQueueAdapter {
           "INSERT INTO print_jobs(id,order_id,type,status,created_at,source_job_id,payload) VALUES(?,?,'reprint','pending',?,?,?)",
           jobId,
           source.orderId,
-          now(),
+          this.db.timestamp(),
           id,
           JSON.stringify({ items: source.items, notes: source.notes, reason }),
         );

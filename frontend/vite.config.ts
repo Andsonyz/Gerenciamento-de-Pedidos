@@ -8,6 +8,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      "/simulacao/api": "http://127.0.0.1:3001",
+      "/simulacao/sw.js": "http://127.0.0.1:3001",
       "/api": "http://127.0.0.1:3001",
       "/socket.io": { target: "http://127.0.0.1:3001", ws: true },
     },

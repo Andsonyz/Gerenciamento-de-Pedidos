@@ -19,6 +19,8 @@
     "setup": "npm run build -w shared && npm run build -w backend && node backend/dist/setup.js",
     "demo:setup": "npm run build -w shared && npm run build -w backend && node backend/dist/demo-setup.js",
     "backup": "node backend/dist/backup.js",
+    "backup:simulation": "node backend/dist/backup.js --simulation",
+    "access:reset-demo": "npm run build -w shared && npm run build -w backend && node backend/dist/reset-demo.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

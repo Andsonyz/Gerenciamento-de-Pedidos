@@ -21,8 +21,10 @@ import type {
   PrintJob,
   RestaurantSettings,
   User,
+  Notifications,
 } from "@restaurante/shared";
 import { api, ApiError, setCsrfToken } from "./api";
+import { BASE_PATH, SIMULATION } from "./environment";
 import {
   getOperation,
   readOperations,
@@ -32,6 +34,7 @@ import {
 } from "./operations";
 export type { PendingOperation } from "./operations";
 interface Data {
+  notifications: Notifications;
   tables: DiningTable[];
   products: CatalogProduct[];
   categories: Category[];
@@ -45,6 +48,7 @@ interface Data {
   settings: RestaurantSettings;
 }
 const initial: Data = {
+  notifications: { items: [], counts: { waiter: 0, order: 0, closing: 0, total: 0 } },
   tables: [],
   products: [],
   categories: [],
@@ -138,6 +142,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const role = auth.user.role;
       const entries: [keyof Data, string][] = [
+        ["notifications", "/notifications"],
         ["tables", "/tables"],
         ["settings", "/settings"],
       ];
@@ -190,7 +195,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setConnected(false);
       return;
     }
-    const socket = io({
+    const socket = io(BASE_PATH || "/", {
       withCredentials: true,
       auth: { csrfToken: auth.csrfToken },
     });
@@ -258,7 +263,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setPending(readOperations(auth.user.id));
           if (operation.path === "/orders" && typeof operation.body.tableId === "number")
             localStorage.removeItem(
-              `mesa.draft.v3.${auth.user.id}.${operation.body.tableId}.${String(operation.body.sessionId)}.${operation.tabId}`,
+              `mesa.draft.v3.${SIMULATION ? "simulation." : ""}${auth.user.id}.${operation.body.tableId}.${String(operation.body.sessionId)}.${operation.tabId}`,
             );
         }
         await reload();
@@ -276,7 +281,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           operation &&
           cause instanceof ApiError &&
           ([400, 403, 404, 413, 422].includes(cause.status) ||
-            (cause.status === 409 && cause.code === "BUSINESS_CONFLICT"))
+            (cause.status === 409 &&
+              ["BUSINESS_CONFLICT", "INSUFFICIENT_STOCK"].includes(cause.code || "")))
         ) {
           completeOperation(auth.user.id, operation);
           setPending(readOperations(auth.user.id));

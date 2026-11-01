@@ -26,6 +26,6 @@ CREATE TABLE IF NOT EXISTS print_jobs(id TEXT PRIMARY KEY,order_id TEXT NOT NULL
 CREATE INDEX IF NOT EXISTS print_status ON print_jobs(status,created_at);
 CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT REFERENCES users(id),action TEXT NOT NULL,entity_id TEXT NOT NULL,detail TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS restaurant_settings(id INTEGER PRIMARY KEY CHECK(id=1),name TEXT NOT NULL,other_payment_enabled INTEGER NOT NULL CHECK(other_payment_enabled IN(0,1)));
-INSERT OR IGNORE INTO restaurant_settings VALUES(1,'Maison · Restaurante',0);
+INSERT OR IGNORE INTO restaurant_settings(id,name,other_payment_enabled) VALUES(1,'Maison · Restaurante',0);
 CREATE TABLE IF NOT EXISTS operations(request_id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,fingerprint TEXT NOT NULL,response TEXT NOT NULL,created_at TEXT NOT NULL);
 `;

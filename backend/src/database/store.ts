@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, copyFileSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import { premiumSchema } from "./migrations.js";
+import { operationsSchema } from "./operations-schema.js";
 import { OrderDatabase } from "../database.js";
 import { HttpError } from "../errors.js";
 import type { Order } from "@restaurante/shared";
@@ -10,6 +11,17 @@ import type { Order } from "@restaurante/shared";
 export const now = () => new Date().toISOString();
 export class Store {
   readonly raw: DatabaseSync;
+  private clock: () => string = now;
+  private transactionDepth = 0;
+  timestamp() {
+    return this.clock();
+  }
+  setClock(clock: () => string) {
+    this.clock = clock;
+  }
+  withinTransaction<T>(fn: () => T): T {
+    return this.transactionDepth ? fn() : this.tx(fn);
+  }
   constructor(path: string) {
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     // The legacy initializer is retained to seed/import the existing installation.
@@ -38,25 +50,57 @@ export class Store {
     this.raw.exec(
       "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
     );
-    this.tx(() => {
-      this.raw.exec(premiumSchema);
-      if (this.get("SELECT version FROM schema_migrations WHERE version=2")) return;
-      for (const table of tables)
-        this.run("INSERT INTO dining_tables(id,name) VALUES(?,?)", table.id, table.name);
-      for (const p of products) {
-        this.run("INSERT OR IGNORE INTO categories(name) VALUES(?)", p.category);
-        this.run(
-          "INSERT INTO menu_products(id,name,category_id,price_cents) VALUES(?,?,(SELECT id FROM categories WHERE name=?),?)",
-          p.id,
-          p.name,
-          p.category,
-          p.priceCents,
-        );
-      }
-      for (const order of [...orders].reverse()) this.importOrder(order);
-      this.run("INSERT INTO schema_migrations VALUES(2,?)", now());
-      this.audit(null, "migration.premium", "2", { orders: orders.length });
-    });
+    try {
+      this.tx(() => {
+        this.raw.exec(premiumSchema);
+        if (this.get("SELECT version FROM schema_migrations WHERE version=2")) return;
+        for (const table of tables)
+          this.run(
+            "INSERT INTO dining_tables(id,name) VALUES(?,?)",
+            table.id,
+            table.name,
+          );
+        for (const p of products) {
+          this.run("INSERT OR IGNORE INTO categories(name) VALUES(?)", p.category);
+          this.run(
+            "INSERT INTO menu_products(id,name,category_id,price_cents) VALUES(?,?,(SELECT id FROM categories WHERE name=?),?)",
+            p.id,
+            p.name,
+            p.category,
+            p.priceCents,
+          );
+        }
+        for (const order of [...orders].reverse()) this.importOrder(order);
+        this.run("INSERT INTO schema_migrations VALUES(2,?)", now());
+        this.audit(null, "migration.premium", "2", { orders: orders.length });
+      });
+      this.tx(() => {
+        if (!this.get("SELECT version FROM schema_migrations WHERE version=3")) {
+          this.raw.exec(operationsSchema);
+          this.run("INSERT INTO schema_migrations VALUES(3,?)", now());
+          this.audit(null, "migration.operations", "3", {});
+        }
+      });
+      this.tx(() => {
+        if (!this.get("SELECT version FROM schema_migrations WHERE version=5")) {
+          this.raw.exec(
+            "ALTER TABLE restaurant_settings ADD COLUMN time_zone TEXT NOT NULL DEFAULT 'America/Fortaleza'",
+          );
+          this.run("INSERT INTO schema_migrations VALUES(5,?)", now());
+        }
+      });
+      this.tx(() => {
+        if (!this.get("SELECT version FROM schema_migrations WHERE version=6")) {
+          this.raw.exec(
+            "CREATE TABLE table_service_state(session_id TEXT PRIMARY KEY REFERENCES table_sessions(id),requested_at TEXT NOT NULL,requested_by TEXT REFERENCES users(id),acknowledged_at TEXT,acknowledged_by TEXT REFERENCES users(id),closing_at TEXT)",
+          );
+          this.run("INSERT INTO schema_migrations VALUES(6,?)", now());
+        }
+      });
+    } catch (error) {
+      this.raw.close();
+      throw error;
+    }
   }
   private importOrder(order: Order) {
     let session = this.get<{ id: string }>(
@@ -121,7 +165,9 @@ export class Store {
     return this.raw.prepare(sql).run(...params);
   }
   tx<T>(fn: () => T): T {
+    if (this.transactionDepth) return fn();
     this.raw.exec("BEGIN IMMEDIATE");
+    this.transactionDepth++;
     try {
       const value = fn();
       this.raw.exec("COMMIT");
@@ -129,6 +175,8 @@ export class Store {
     } catch (error) {
       this.raw.exec("ROLLBACK");
       throw error;
+    } finally {
+      this.transactionDepth--;
     }
   }
   audit(userId: string | null, action: string, entityId: string, detail: unknown) {

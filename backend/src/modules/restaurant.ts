@@ -14,9 +14,12 @@ import type {
   User,
   OrderStatus,
 } from "@restaurante/shared";
-import { Store, now } from "../database/store.js";
+import { Store } from "../database/store.js";
 import { HttpError } from "../errors.js";
 import type { PrintQueueAdapter } from "../printing/PrinterAdapter.js";
+import { Inventory } from "./inventory.js";
+import { localDate } from "./analytics.js";
+import { TableNotifications } from "./notifications.js";
 
 interface SessionRow {
   id: string;
@@ -34,17 +37,30 @@ export class Restaurant {
     readonly printer: PrintQueueAdapter,
   ) {}
   settings(): RestaurantSettings {
-    const r = this.db.get<{ name: string; other_payment_enabled: number }>(
-      "SELECT * FROM restaurant_settings WHERE id=1",
-    )!;
-    return { name: r.name, otherPaymentEnabled: !!r.other_payment_enabled };
+    const r = this.db.get<{
+      name: string;
+      other_payment_enabled: number;
+      time_zone: string;
+    }>("SELECT * FROM restaurant_settings WHERE id=1")!;
+    return {
+      name: r.name,
+      otherPaymentEnabled: !!r.other_payment_enabled,
+      timeZone: r.time_zone,
+    };
   }
   saveSettings(user: User, data: RestaurantSettings) {
+    const timeZone = data.timeZone || this.settings().timeZone || "America/Fortaleza";
+    try {
+      new Intl.DateTimeFormat("pt-BR", { timeZone }).format();
+    } catch {
+      throw new HttpError(400, "Fuso horário inválido.");
+    }
     return this.db.tx(() => {
       this.db.run(
-        "UPDATE restaurant_settings SET name=?,other_payment_enabled=? WHERE id=1",
+        "UPDATE restaurant_settings SET name=?,other_payment_enabled=?,time_zone=? WHERE id=1",
         data.name,
         Number(data.otherPaymentEnabled),
+        timeZone,
       );
       this.db.audit(user.id, "settings.updated", "1", data);
       return this.settings();
@@ -68,7 +84,16 @@ export class Restaurant {
       >(
         `SELECT p.id,p.name,c.name as category,p.price_cents as priceCents,p.active,p.available FROM menu_products p JOIN categories c ON c.id=p.category_id ${admin ? "" : "WHERE p.active=1"} ORDER BY c.name,p.name`,
       )
-      .map((p) => ({ ...p, active: !!p.active, available: !!p.available }));
+      .map((p) => {
+        const stock = new Inventory(this.db).availability(p.id);
+        return {
+          ...p,
+          active: !!p.active,
+          available: !!p.available,
+          stockTracked: stock.tracked,
+          stockAvailable: stock.available,
+        };
+      });
   }
   category(user: User, name: string) {
     return this.db.tx(() => {
@@ -148,7 +173,7 @@ export class Restaurant {
         "INSERT INTO table_sessions(id,table_id,opened_at) VALUES(?,?,?)",
         id,
         tableId,
-        now(),
+        this.db.timestamp(),
       );
       this.db.run("UPDATE dining_tables SET status='occupied' WHERE id=?", tableId);
       this.db.audit(user.id, "table.opened", id, { tableId });
@@ -197,7 +222,10 @@ export class Restaurant {
     if (user.role === "waiter" && order.userId !== user.id)
       throw new HttpError(403, "Você pode consultar somente seus pedidos.");
   }
-  createOrder(user: User, input: CreateOrder & { sessionId: string }) {
+  createOrder(
+    user: User,
+    input: CreateOrder & { sessionId: string; overrideReason?: string },
+  ) {
     const payload = {
       ...input,
       items: [...input.items].sort((a, b) => a.productId - b.productId),
@@ -226,7 +254,7 @@ export class Restaurant {
         input.requestId,
         session.id,
         user.id,
-        now(),
+        this.db.timestamp(),
         input.notes,
       );
       for (const item of payload.items) {
@@ -247,6 +275,8 @@ export class Restaurant {
         );
       }
       const order = this.order(id);
+      new Inventory(this.db).reserve(user, order, input.overrideReason);
+      new TableNotifications(this.db).completeCall(user, session.id);
       const total = this.bill(session.id).totalCents;
       if (!Number.isSafeInteger(total) || total > 1_000_000_000_000)
         throw new HttpError(409, "Limite de valor por atendimento excedido.");
@@ -274,6 +304,7 @@ export class Restaurant {
       if (order.status === status) return order;
       if (allowed[order.status] !== status)
         throw new HttpError(409, "Transição de preparo inválida.");
+      if (status === "preparing") new Inventory(this.db).consume(user, order);
       this.db.run("UPDATE service_orders SET status=? WHERE id=?", status, id);
       this.db.audit(user.id, "order.status", id, { before: order.status, after: status });
       return this.order(id);
@@ -325,6 +356,7 @@ export class Restaurant {
       .map((s) => this.bill(s.id));
   }
   requestClose(user: User, id: string) {
+    // The service-state timestamp follows the same transaction as the table update.
     return this.db.tx(() => {
       const s = this.requireOpen(id);
       this.db.run("UPDATE table_sessions SET status='awaiting_payment' WHERE id=?", id);
@@ -333,6 +365,7 @@ export class Restaurant {
         s.table_id,
       );
       this.db.audit(user.id, "table.close_requested", id, {});
+      new TableNotifications(this.db).closing(user, id);
       return this.bill(id);
     });
   }
@@ -344,20 +377,17 @@ export class Restaurant {
   dashboard(): Dashboard {
     const tables = this.tables(),
       orders = this.listOrders();
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-    const received = this.db.get<{ n: number }>(
-      "SELECT COALESCE(SUM(amount_cents),0) n FROM payments WHERE created_at>=? AND created_at<?",
-      start.toISOString(),
-      end.toISOString(),
-    )!.n;
-    const refunded = this.db.get<{ n: number }>(
-      "SELECT COALESCE(SUM(amount_cents),0) n FROM refunds WHERE created_at>=? AND created_at<?",
-      start.toISOString(),
-      end.toISOString(),
-    )!.n;
+    const zone = this.settings().timeZone || "America/Fortaleza";
+    const today = localDate(this.db.timestamp(), zone);
+    const amount = (table: "payments" | "refunds") =>
+      this.db
+        .all<{ amount_cents: number; created_at: string }>(
+          `SELECT amount_cents,created_at FROM ${table}`,
+        )
+        .filter((p) => localDate(p.created_at, zone) === today)
+        .reduce((s, p) => s + p.amount_cents, 0);
+    const received = amount("payments"),
+      refunded = amount("refunds");
     return {
       totalTables: tables.length,
       availableTables: tables.filter((t) => t.status === "available").length,

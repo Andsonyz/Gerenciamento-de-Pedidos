@@ -5,11 +5,16 @@ import { Finance } from "./modules/finance.js";
 import { Cancellations } from "./modules/cancellations.js";
 import * as s from "./modules/schemas.js";
 import type { StateChange } from "@restaurante/shared";
+import { operationsRoutes } from "./operations-routes.js";
+import type { Simulation } from "./modules/simulation.js";
+import { simulationRoutes } from "./simulation-routes.js";
+import { TableNotifications } from "./modules/notifications.js";
 
 export function routes(
   auth: AuthService,
   r: Restaurant,
   notify: (scope: StateChange["scope"], id: string, owner?: string | null) => void,
+  simulation?: Simulation,
 ) {
   const router = Router(),
     finance = new Finance(r),
@@ -21,21 +26,23 @@ export function routes(
   router.post("/auth/login", (req, res) => {
     const input = s.parse(s.login, req.body),
       result = auth.login(input.username, input.password, req.ip ?? "unknown");
-    res.cookie("restaurant_session", result.token, {
+    res.cookie(auth.cookieName, result.token, {
       httpOnly: true,
       sameSite: "strict",
       secure: req.secure,
-      path: "/",
+      path: auth.cookiePath,
       maxAge: 12 * 60 * 60_000,
     });
     res.json(result.session);
   });
   router.use(auth.middleware);
+  if (simulation) router.use(simulationRoutes(simulation));
+  router.use(operationsRoutes(r, notify));
   router.get("/auth/me", (_req, res) => res.json(res.locals.auth));
   router.post("/auth/logout", (req, res) => {
-    auth.logout(cookieToken(req.headers.cookie));
-    res.clearCookie("restaurant_session", {
-      path: "/",
+    auth.logout(cookieToken(req.headers.cookie, auth.cookieName));
+    res.clearCookie(auth.cookieName, {
+      path: auth.cookiePath,
       httpOnly: true,
       sameSite: "strict",
       secure: req.secure,
@@ -44,6 +51,27 @@ export function routes(
     res.json({ ok: true });
   });
   router.get("/tables", (_req, res) => res.json(r.tables()));
+  router.get("/notifications", (_req, res) =>
+    res.json(new TableNotifications(r.db).list()),
+  );
+  router.post("/tables/:id/call-waiter", service, (req, res) => {
+    const value = new TableNotifications(r.db).call(
+      actor(res),
+      s.numericId(req.params.id),
+      s.parse(s.request, req.body).requestId,
+    );
+    notify("tables", String(req.params.id));
+    res.json(value.value);
+  });
+  router.post("/tables/:id/acknowledge-call", service, (req, res) => {
+    const value = new TableNotifications(r.db).acknowledge(
+      actor(res),
+      s.numericId(req.params.id),
+      s.parse(s.request, req.body).requestId,
+    );
+    notify("tables", String(req.params.id));
+    res.json(value.value);
+  });
   router.post("/tables/:id/open", service, (req, res) => {
     const result = r.open(
       actor(res),
@@ -151,6 +179,7 @@ export function routes(
   router.post("/orders", service, (req, res) => {
     const result = r.createOrder(actor(res), s.parse(s.newOrder, req.body));
     notify("orders", result.value.id, result.value.userId);
+    notify("tables", String(result.value.tableId));
     notify("printing", result.value.id);
     res.status(result.created ? 201 : 200).json(result.value);
   });
@@ -161,6 +190,7 @@ export function routes(
       s.parse(s.orderStatus, req.body).status,
     );
     notify("orders", o.id, o.userId);
+    notify("tables", String(o.tableId));
     notify("printing", o.id);
     res.json(actor(res).role === "kitchen" ? { id: o.id, status: o.status } : o);
   });
@@ -183,6 +213,7 @@ export function routes(
       s.parse(s.cancellation, req.body),
     );
     notify("orders", result.value.id, result.value.userId);
+    notify("tables", String(result.value.tableId));
     notify("printing", result.value.id);
     res.json(result.value);
   });
@@ -193,6 +224,7 @@ export function routes(
       s.parse(s.resolution, req.body),
     );
     notify("cancellations", c.id, c.userId);
+    notify("tables", "cancellation");
     notify("printing", c.orderId);
     res.json(c);
   });

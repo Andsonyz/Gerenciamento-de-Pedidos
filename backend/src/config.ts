@@ -7,6 +7,9 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 export const dbPath = process.env.DATABASE_PATH
   ? resolve(process.env.DATABASE_PATH)
   : fileURLToPath(new URL("../data/restaurant.sqlite", import.meta.url));
+export const simulationDbPath = process.env.SIMULATION_DATABASE_PATH
+  ? resolve(process.env.SIMULATION_DATABASE_PATH)
+  : fileURLToPath(new URL("../data/simulation.sqlite", import.meta.url));
 export function tlsOptions() {
   if (!process.env.TLS_KEY && !process.env.TLS_CERT) return undefined;
   if (!process.env.TLS_KEY || !process.env.TLS_CERT)

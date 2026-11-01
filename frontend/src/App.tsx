@@ -39,8 +39,24 @@ import { OrdersPage } from "./Orders";
 import { KitchenPage } from "./Kitchen";
 import { Empty, Field, Form, Modal, statusLabel } from "./components";
 import { dateTime, money } from "./api";
+import { BASE_PATH, SIMULATION } from "./environment";
+import { InventoryPage } from "./pages/InventoryPage";
+import { PurchasingPage } from "./pages/PurchasingPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { SimulationPage } from "./pages/SimulationPage";
+import {
+  NotificationBell,
+  NotificationSummary,
+  NotificationsPage,
+} from "./Notifications";
 const management: Role[] = ["admin", "cashier"];
 const navigation = [
+  {
+    to: "/avisos",
+    label: "Notificações",
+    icon: AlertTriangle,
+    roles: ["admin", "cashier", "waiter", "kitchen"],
+  },
   {
     to: "/painel",
     label: "Visão geral",
@@ -60,6 +76,30 @@ const navigation = [
     roles: ["admin", "cashier", "waiter"],
   },
   { to: "/historico", label: "Histórico", icon: History, roles: management },
+  {
+    to: "/estoque",
+    label: "Ingredientes e estoque",
+    icon: UtensilsCrossed,
+    roles: management,
+  },
+  {
+    to: "/compras",
+    label: "Compras e fornecedores",
+    icon: ClipboardList,
+    roles: management,
+  },
+  {
+    to: "/indicadores",
+    label: "Indicadores e reposição",
+    icon: LayoutDashboard,
+    roles: management,
+  },
+  {
+    to: "/simulador",
+    label: "Simulação",
+    icon: Armchair,
+    roles: ["admin", "waiter", "cashier", "kitchen"],
+  },
   {
     to: "/cozinha",
     label: "Central de Impressão",
@@ -94,7 +134,7 @@ function Guard({ roles, children }: { roles: Role[]; children: ReactNode }) {
 }
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASE_PATH || "/"}>
       <StoreProvider>
         <AuthenticatedApp />
       </StoreProvider>
@@ -119,6 +159,11 @@ function Login() {
   const { login } = useStore();
   return (
     <div className="login-screen">
+      {SIMULATION && (
+        <div className="training-login-banner" role="status">
+          AMBIENTE SIMULADO — DADOS DE TREINAMENTO · <a href="/">Voltar ao restaurante</a>
+        </div>
+      )}
       <section className="login-story">
         <Link className="brand" to="/">
           mesa<span>.</span>
@@ -251,6 +296,7 @@ function Shell() {
           </div>
         </div>
         <p className="nav-caption">PRINCIPAL</p>
+        <NotificationSummary />
         <nav aria-label="Navegação principal">
           {nav.map((item) => (
             <NavLink
@@ -305,6 +351,7 @@ function Shell() {
             </span>
           </div>
           <div className="topbar-actions">
+            <NotificationBell />
             <span className={`connection-indicator ${connected ? "online" : ""}`}>
               {connected ? <Wifi size={15} /> : <WifiOff size={15} />}
               <span>{connected ? "Ao vivo" : "Sem conexão"}</span>
@@ -342,6 +389,17 @@ function Shell() {
           </div>
         </header>
         <main className="page-content">
+          {SIMULATION && (
+            <div className="alert" role="status">
+              <strong>AMBIENTE SIMULADO — DADOS DE TREINAMENTO</strong>{" "}
+              <a href="/">Voltar ao restaurante</a>
+            </div>
+          )}
+          {!SIMULATION && role === "admin" && (
+            <a className="button" href="/simulacao/">
+              Abrir simulação
+            </a>
+          )}
           {error && (
             <div role="alert" className="alert error">
               <AlertTriangle size={17} />
@@ -378,6 +436,32 @@ function Shell() {
           )}
           <InstallBanner />
           <Routes>
+            <Route path="/avisos" element={<NotificationsPage />} />
+            <Route
+              path="/estoque"
+              element={
+                <Guard roles={management}>
+                  <InventoryPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="/compras"
+              element={
+                <Guard roles={management}>
+                  <PurchasingPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="/indicadores"
+              element={
+                <Guard roles={management}>
+                  <AnalyticsPage />
+                </Guard>
+              }
+            />
+            <Route path="/simulador" element={<SimulationPage />} />
             <Route
               path="/painel"
               element={

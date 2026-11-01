@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { HttpError } from "../errors.js";
 import { orderSchema } from "../validation.js";
-export const newOrder = orderSchema.safeExtend({ sessionId: z.string().uuid() });
+export const newOrder = orderSchema.safeExtend({
+  sessionId: z.string().uuid(),
+  overrideReason: z.string().trim().min(3).max(500).optional(),
+});
 export const id = z.string().uuid();
 export const reason = z.string().trim().min(3).max(500);
 const cents = z.number().int().min(0).max(100_000_000);
@@ -79,7 +82,11 @@ export const resolution = z
 export const printStatus = z.object({ status: z.enum(["displayed", "failed"]) }).strict();
 export const reprint = z.object({ requestId: id, reason }).strict();
 export const settings = z
-  .object({ name: z.string().trim().min(2).max(100), otherPaymentEnabled: z.boolean() })
+  .object({
+    name: z.string().trim().min(2).max(100),
+    otherPaymentEnabled: z.boolean(),
+    timeZone: z.string().max(80).optional(),
+  })
   .strict();
 export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);

@@ -1,4 +1,5 @@
 import { createRequestId } from "./submission";
+import { SIMULATION } from "./environment";
 export interface PendingOperation {
   key: string;
   path: string;
@@ -11,7 +12,8 @@ export type OperationStorage = Pick<
   Storage,
   "getItem" | "setItem" | "removeItem" | "key" | "length"
 >;
-const prefix = (id: string) => `mesa.operation.v3.${encodeURIComponent(id)}.`;
+const prefix = (id: string) =>
+  `mesa.operation.v3.${SIMULATION ? "simulation." : ""}${encodeURIComponent(id)}.`;
 export function tabScope(): string {
   if (typeof sessionStorage === "undefined") return "test-tab";
   let id = sessionStorage.getItem("mesa.tab.v1");
