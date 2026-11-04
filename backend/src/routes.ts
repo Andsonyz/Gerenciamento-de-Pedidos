@@ -9,6 +9,7 @@ import { operationsRoutes } from "./operations-routes.js";
 import type { Simulation } from "./modules/simulation.js";
 import { simulationRoutes } from "./simulation-routes.js";
 import { TableNotifications } from "./modules/notifications.js";
+import { trainingResourcesRoutes } from "./training-resources-routes.js";
 
 export function routes(
   auth: AuthService,
@@ -37,6 +38,7 @@ export function routes(
   });
   router.use(auth.middleware);
   if (simulation) router.use(simulationRoutes(simulation));
+  if (simulation) router.use(trainingResourcesRoutes(r, notify));
   router.use(operationsRoutes(r, notify));
   router.get("/auth/me", (_req, res) => res.json(res.locals.auth));
   router.post("/auth/logout", (req, res) => {

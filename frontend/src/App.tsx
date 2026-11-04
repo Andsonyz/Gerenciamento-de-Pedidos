@@ -44,6 +44,7 @@ import { InventoryPage } from "./pages/InventoryPage";
 import { PurchasingPage } from "./pages/PurchasingPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { SimulationPage } from "./pages/SimulationPage";
+import { TrainingResourcesPage } from "./pages/TrainingResourcesPage";
 import {
   NotificationBell,
   NotificationSummary,
@@ -51,6 +52,9 @@ import {
 } from "./Notifications";
 const management: Role[] = ["admin", "cashier"];
 const navigation = [
+  ...(SIMULATION
+    ? [{ to: "/recursos", label: "Patrocínios e caixa", icon: Users, roles: management }]
+    : []),
   {
     to: "/avisos",
     label: "Notificações",
@@ -436,6 +440,16 @@ function Shell() {
           )}
           <InstallBanner />
           <Routes>
+            {SIMULATION && (
+              <Route
+                path="/recursos"
+                element={
+                  <Guard roles={management}>
+                    <TrainingResourcesPage />
+                  </Guard>
+                }
+              />
+            )}
             <Route path="/avisos" element={<NotificationsPage />} />
             <Route
               path="/estoque"

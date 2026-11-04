@@ -308,6 +308,16 @@ Resultados desta evolução e contratos adicionais: [verificação de estoque, c
 | Mesa não encerra       | Confira saldo e solicitações pendentes; baixa excepcional só com administrador e justificativa                    |
 | Banco bloqueado        | Pare instâncias duplicadas, use disco local e tente novamente preservando o identificador da operação             |
 
+## Dashboard externo do treinamento
+
+A integração opcional com o projeto separado `DashboardRestaurante` envia somente o banco simulado por HTTPS de saída. O banco operacional permanece independente. Configure as quatro variáveis `DASHBOARD_*` de `.env.example` com os valores gerados pelo provisionamento do dashboard, depois compile e reinicie normalmente. Sem configuração, não há transmissão.
+
+No treinamento, **Patrocínios e caixa** permite ao administrador cadastrar patrocinadores e receber dinheiro, alimentos e equipamentos na mesma contribuição; também registra abertura comprovada, despesas, outras entradas, pagamentos de compras e reversões. Caixa pode consultar. Receber uma compra não registra seu pagamento. O saldo inclui o livro original de pagamentos/estornos de clientes sem duplicação.
+
+O conector usa outbox na mesma transação SQLite, retentativas, ACK idempotente e snapshots por rodada. Resets preservam a fila e criam dataset novo. `GET /simulacao/api/dashboard-sync` informa estado sem revelar token. Não remova tabelas `dashboard_sync_*` nem diminua a sequência para corrigir falhas. Faça backup consistente de todo o banco; restauração antiga conflitante exige recuperação explícita com nova origem. O token de dispositivo é revogável, distinto da sessão do usuário e não contém a chave administrativa da nuvem.
+
+O pacote compartilhado está em `backend/vendor/mesa-contracts-1.0.0.tgz`, com integridade no lockfile; a atualização deve ser coordenada com o receptor e acompanhada dos testes `dashboard-*`. Implantação, rotação, compatibilidade e recuperação estão documentadas em `DashboardRestaurante/docs/integration.md` e `docs/deployment.md`. A validação local não certifica a implantação remota.
+
 ## Limites desta entrega
 
 Pagamentos e estornos são registros manuais; não há integração bancária, emissão fiscal ou hardware ESC/POS. Estornos de contas já encerradas exigem evolução futura específica; o fluxo atual bloqueia essa alteração. Não há transferência/divisão de mesas ou reservas por horário. A validação automatizada em viewport de celular não substitui teste do Wi-Fi, firewall, confiança HTTPS e instalação em aparelhos físicos do restaurante. WCAG recebeu cuidados de foco, diálogo, rótulos e teclado, mas não há certificação formal de acessibilidade.

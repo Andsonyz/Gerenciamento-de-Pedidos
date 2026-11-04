@@ -18,6 +18,8 @@ import { Simulation } from "./modules/simulation.js";
 import { seedSimulation } from "./modules/simulation-seed.js";
 import { seedSimulationInventory } from "./modules/demo-inventory.js";
 import { assertSeparateDatabases } from "./database/identity.js";
+import { DashboardConnector, type ConnectorConfig } from "./integration/connector.js";
+import { TrainingResources } from "./modules/training-resources.js";
 
 export function createApplication(options: {
   dbPath: string;
@@ -27,6 +29,7 @@ export function createApplication(options: {
   allowedSubnets?: string[];
   tls?: { key: Buffer; cert: Buffer };
   bootstrapAdmin?: { username: string; password: string; name: string };
+  dashboardSync?: ConnectorConfig;
 }) {
   if (options.simulationDbPath)
     assertSeparateDatabases(options.dbPath, options.simulationDbPath);
@@ -111,10 +114,17 @@ export function createApplication(options: {
   let training:
     | { db: Store; engine: Simulation; auth: AuthService; restaurant: Restaurant }
     | undefined;
+  let dashboardConnector: DashboardConnector | undefined;
   if (options.simulationDbPath) {
     const trainingDb = new Store(options.simulationDbPath);
     seedSimulation(trainingDb);
     seedSimulationInventory(trainingDb);
+    new TrainingResources(trainingDb);
+    if (options.dashboardSync)
+      dashboardConnector = new DashboardConnector(
+        trainingDb,
+        options.dashboardSync,
+      ).start();
     const trainingAuth = new AuthService(trainingDb, "restaurant_training_session");
     const namespace = io.of("/simulacao");
     namespace.use((socket, next) => {
@@ -263,6 +273,7 @@ export function createApplication(options: {
       closed = true;
       clearInterval(timer);
       training?.engine.close();
+      await dashboardConnector?.close();
       await new Promise<void>((resolve) => {
         io.close(() => resolve());
         http.closeIdleConnections();

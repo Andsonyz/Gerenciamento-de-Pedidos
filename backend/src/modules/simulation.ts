@@ -287,6 +287,11 @@ export class Simulation {
     this.r.db.withinTransaction(() => {
       const run = this.run();
       for (const table of [
+        "dashboard_equipment",
+        "dashboard_contribution_lines",
+        "dashboard_contributions",
+        "dashboard_sponsors",
+        "dashboard_cash_entries",
         "simulation_events",
         "simulation_groups",
         "simulation_runs",
@@ -324,7 +329,14 @@ export class Simulation {
       this.r.db.run("UPDATE dining_tables SET status='available'");
       seedSimulation(this.r.db);
       seedSimulationInventory(this.r.db);
+      if (
+        this.r.db.get(
+          "SELECT name FROM sqlite_master WHERE name='dashboard_finance_settings'",
+        )
+      )
+        this.r.db.run("UPDATE dashboard_finance_settings SET opening_cents=0 WHERE id=1");
       this.r.db.audit(user.id, "simulation.reset", run?.id ?? "empty", {});
+      this.r.db.markDatasetReset();
     });
   }
   intent(user: User, id: string) {

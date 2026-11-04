@@ -9,6 +9,14 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
 const server = createApplication({
   dbPath,
   simulationDbPath,
+  dashboardSync: process.env.DASHBOARD_SYNC_URL
+    ? {
+        endpoint: process.env.DASHBOARD_SYNC_URL,
+        restaurantId: process.env.DASHBOARD_RESTAURANT_ID ?? "",
+        sourceId: process.env.DASHBOARD_SOURCE_ID ?? "",
+        token: process.env.DASHBOARD_DEVICE_TOKEN ?? "",
+      }
+    : undefined,
   tls: tlsOptions(),
   allowedSubnets: process.env.ALLOWED_SUBNETS?.split(",")
     .map((s) => s.trim())

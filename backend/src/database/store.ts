@@ -13,6 +13,17 @@ export class Store {
   readonly raw: DatabaseSync;
   private clock: () => string = now;
   private transactionDepth = 0;
+  private beforeCommit: (() => void) | undefined;
+  private resetListener: (() => void) | undefined;
+  setCommitHook(hook?: () => void) {
+    this.beforeCommit = hook;
+  }
+  setDatasetResetHook(hook?: () => void) {
+    this.resetListener = hook;
+  }
+  markDatasetReset() {
+    this.resetListener?.();
+  }
   timestamp() {
     return this.clock();
   }
@@ -162,6 +173,8 @@ export class Store {
     return this.raw.prepare(sql).all(...params) as T[];
   }
   run(sql: string, ...params: SQLInputValue[]) {
+    if (this.beforeCommit && !this.transactionDepth)
+      return this.tx(() => this.raw.prepare(sql).run(...params));
     return this.raw.prepare(sql).run(...params);
   }
   tx<T>(fn: () => T): T {
@@ -170,6 +183,7 @@ export class Store {
     this.transactionDepth++;
     try {
       const value = fn();
+      this.beforeCommit?.();
       this.raw.exec("COMMIT");
       return value;
     } catch (error) {
